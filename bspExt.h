@@ -133,4 +133,33 @@ bspExtRemoveDataBreakpoint(void *dataAddr, int mode, BspExtBpntHdlr usrHandler, 
  */ 
 extern int bspExtVerbosity;
 
+/* Install an ISR ( void (*isr)(void *uarg) ) to an interrupt line
+ * ('name' in the RTEMS BSP jargon; these can be found in <bsp/irq.h>
+ * E.g. the 'name' of a PCI interrupt line as read from PCI configuration
+ * space has to be offset by BSP_PCI_IRQ_LOWEST_OFFSET on some BSPs.)
+ *
+ * Unless the BSPEXT_ISR_NONSHARED flag is set, ISRs are expected
+ * to support interrupt sharing.
+ *
+ * IMPLEMENTATION NOTE:
+ *  This is implemented by installing a wrapper onto the generic
+ *  RTEMS/BSP API. The wrapper then dispatches all registered ISRs
+ *  and provides them with the user arg etc.
+ * 
+ * RETURNS: 0 on success, nonzero on error.
+ */
+#define BSPEXT_ISR_NONSHARED 1
+int
+bspExtInstallSharedISR(int name, void (*isr)(void *uarg), void * uarg, int flags);
+
+/* Remove an ISR. Both, the 'isr' and 'uarg' parameters must match
+ * a registered ISR on the specified line ('name').
+ *
+ * IMPLEMENTATION NOTE:
+ * 
+ * RETURNS: 0 on success, nonzero on error.
+ */
+int
+bspExtRemoveSharedISR(int name, void (*isr)(void *uarg), void *uarg);
+
 #endif
