@@ -5,7 +5,6 @@
 #       Template library Makefile
 #
 
-RTEMS_MAKEFILE_PATH = $(PROJECT_ROOT)/powerpc-rtems/$(RTEMS_BSP)
 
 LIBNAME=libbspExt.a        # xxx- your library names goes here
 LIB=${ARCH}/${LIBNAME}

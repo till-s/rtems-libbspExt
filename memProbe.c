@@ -100,7 +100,7 @@ rtems_status_code
 bspExtMemProbe(void *addr, int write, int size, void *pval)
 {
 rtems_status_code	rval=RTEMS_SUCCESSFUL;
-unsigned char	buf[4];
+unsigned	long buf;
 MemProber	probe;
 void		*faultAddr;
 
@@ -122,18 +122,18 @@ void		*faultAddr;
 	 */
 	if (write) {
 		if (pval)
-			memcpy(buf,pval,size);
-		if ((faultAddr=probe(0,buf,addr)))
+			memcpy(&buf,pval,size);
+		if ((faultAddr=probe(0,&buf,addr)))
 			rval=RTEMS_INVALID_ADDRESS;
 	} else {
-		if ((faultAddr=probe(0,addr,buf))) {
+		if ((faultAddr=probe(0,addr,&buf))) {
 			rval=RTEMS_INVALID_ADDRESS;
 			/* pass them the fault address back */
 			if (pval)
 				memcpy(pval,&faultAddr,size);
 		} else {
 			if (pval)
-				memcpy(pval,buf,size);
+				memcpy(pval,&buf,size);
 		}
 	}
 	return rval;
