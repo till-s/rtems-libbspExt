@@ -65,8 +65,11 @@ bspExtInit(void);
  *           RTEMS_INVALID_ADDRESS 	probed address not mapped/accessible
  *           other			error
  *
- * NOTE: This routine is slow and temporarily disables interrupts (while installing
- *       and restoring a exception handler). It is intended for probing by driver
+ * NOTE: This routine is VERY slow and temporarily disables interrupts (while installing
+ *       and restoring a exception handler and during execution of the handler
+ *       itself, which can take a LONG time!!!).
+ *
+ *       It is intended for probing by driver
  *       initialization code and NOT for ordinary reads/writes.
  */
 

@@ -47,8 +47,12 @@
 #include "bspExt.h"
 
 #include <stdio.h>
+#include <string.h>
 #include <bsp.h>
 #include <assert.h>
+
+#define SRR1_TEA_EXC    (1<<(31-13))
+#define SRR1_MCP_EXC    (1<<(31-12))
 
 static exception_handler_t	origHandler=0;
 
@@ -75,14 +79,17 @@ __asm__(
 	"memProbeByte:		\n"
 	"	lbz %r4, 0(%r4) \n"
 	"	stb %r4, 0(%r5) \n"
+	"	sync	\n"
 	"	blr		\n"
 	"memProbeShort:		\n"
 	"	lhz %r4, 0(%r4) \n"
 	"	sth %r4, 0(%r5) \n"
+	"	sync	\n"
 	"	blr		\n"
 	"memProbeLong:		\n"
 	"	lwz %r4, 0(%r4) \n"
 	"	stw %r4, 0(%r5) \n"
+	"	sync	\n"
 	"memProbeEnd:		\n"
 	"	blr		\n"
 );
@@ -106,8 +113,12 @@ int	caughtDabr;
 		excPtr->GPR3=(unsigned)nip;
 		excPtr->EXC_SRR0 +=4;	/* skip the faulting instruction */
 		/* NOTE DAR is not valid at this point because some boards
-       		 * raise a machine check which doesn't set DAR...
+    	 * raise a machine check which doesn't set DAR...
 		 */
+		/* clear MCP condition */
+		if ( (SRR1_TEA_EXC|SRR1_MCP_EXC) & excPtr->EXC_SRR1 ) {
+			_BSP_clear_hostbridge_errors(0,1);
+		}
 		return;
 	} else if ((caughtDabr=_bspExtCatchDabr(excPtr))) {
 		switch (caughtDabr) {
