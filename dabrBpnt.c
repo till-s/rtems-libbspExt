@@ -55,9 +55,6 @@
 #define IABR_BE	2
 #define IABR_TE 1
 
-#define DABR_TAG	0xdeadbeef
-#define IABR_TAG	0xfeedbeef
-
 #define DEBUG
 #ifdef DEBUG
 #define STATIC
@@ -83,14 +80,11 @@ STATIC struct bpnt_ {
 	int				mode;
 	BspExtBpntHdlr	usrHdlr;	
 	void			*usrArg;
-	unsigned long	saved_instr;
-} BPNTS[2] = { { 0, 0, 0, 0, DABR_TAG }, { 0, 0, 0, 0, IABR_TAG } };
-
-#define SC_OPCODE 	0x44000002	/* sc instruction */
+	unsigned long	saved_msr;
+} BPNTS[2] = { { 0, }, };
 
 #define DABR_FLGS	7
 #define IABR_FLGS	3
-
 
 __asm__(
 	".LOCAL my_syscall	\n"
@@ -190,7 +184,7 @@ bspExtRemoveDataBreakpoint(void *dataAddr)
 rtems_status_code
 bspExtRemoveBreakpoint(void *addr) 
 {
-	return douninstall(DBPNT, addr);
+	return douninstall(IBPNT, addr);
 }
 
 /* 'type' is bit 0, phase is bit 1 */
@@ -199,6 +193,7 @@ bspExtRemoveBreakpoint(void *addr)
 #define CAUSE_IABR_PHASE1	1
 #define CAUSE_IABR_PHASE2	3
 
+#define PHASE2			2
 #define PHASE(cause)	((cause)&2)
 #define TYPE(cause)		((cause)&1)
 
@@ -206,6 +201,7 @@ bspExtRemoveBreakpoint(void *addr)
 int
 _bspExtCatchBreakpoint(BSP_Exception_frame *fp)
 {
+static int		traceInProgress = -1;
 int				rval=0;
 unsigned long	tmp =0;	/* silence compiler warnings */
 int				cause = -1;
@@ -220,19 +216,15 @@ int				cause = -1;
 	else if ( 0x13 == fp->_EXC_number &&
 		      fp->EXC_SRR0 == ((unsigned long)BPNTS[IBPNT].addr & ~IABR_FLGS) )
 		cause = CAUSE_IABR_PHASE1;
-	else if (   12 == fp->_EXC_number ) {
-		if ( (unsigned long)BPNTS[DBPNT].addr + 8 == fp->EXC_SRR0 &&
-		     BPNTS[DBPNT].saved_instr != DABR_TAG )
-			cause = CAUSE_DABR_PHASE2;
-		else if ( (unsigned long)BPNTS[IBPNT].addr + 8 == fp->EXC_SRR0 &&
-		          BPNTS[IBPNT].saved_instr != IABR_TAG )
-			cause = CAUSE_IABR_PHASE2;
+	else if ( 0x0d == fp->_EXC_number && traceInProgress >= 0 ) {
+		cause = traceInProgress | PHASE2;
+		traceInProgress = -1;
 	}
 
 	if ( -1 == cause )
 		return rval;
 
-	if ( 0 == PHASE(cause) ) {
+	if ( ! (PHASE2 & cause) ) {
 		/* temporarily disable breakpoint */
 		if ( DBPNT == TYPE(cause) ) {
 			__asm__ __volatile__("mfspr %0, %2; andc %0, %0, %1; mtspr %2, %0"::"r"(tmp),"r"(DABR_WR|DABR_RD),"i"(R_DABR));
@@ -240,30 +232,21 @@ int				cause = -1;
 			__asm__ __volatile__("mfspr %0, %2; andc %0, %0, %1; mtspr %2, %0"::"r"(tmp),"r"(IABR_BE),"i"(R_IABR));
 		}
 
-		/* save next instruction */
-		BPNTS[TYPE(cause)].saved_instr = *(unsigned long *)(fp->EXC_SRR0+4);
-
-		/* install syscall opcode */
-		*(unsigned long*)(fp->EXC_SRR0+4)=*(unsigned long*)&my_syscall;
-
-		/* force cache write and invalidate instruction cache */
-		__asm__ __volatile__("dcbst 0, %0; icbi 0, %0; sync; isync;"::"r"(fp->EXC_SRR0+4));
+		/* save MSR; enable single step mode */
+		BPNTS[TYPE(cause)].saved_msr = fp->EXC_SRR1;
+		fp->EXC_SRR1 |= MSR_SE;	
+		/* disable interrupts while stepping over the breakpoint */
+		fp->EXC_SRR1 &= ~MSR_EE;
 
 		/* call the user handler */
 		rval=(0==BPNTS[TYPE(cause)].usrHdlr ||
 		         BPNTS[TYPE(cause)].usrHdlr(1,fp,BPNTS[TYPE(cause)].usrArg)) ? -1 : 1;
-
+		traceInProgress = cause;
 	} else {
 		/* must be phase 2 */
-		/* point back to where we stored 'sc' */
-		fp->EXC_SRR0-=4;
 
-		/* restore breakpoint instruction */
-		*(unsigned long*)fp->EXC_SRR0=BPNTS[TYPE(cause)].saved_instr;
-		BPNTS[TYPE(cause)].saved_instr=DBPNT == TYPE(cause) ? DABR_TAG : IABR_TAG;
-
-		/* write out dcache, invalidate icache */
-		__asm__ __volatile__("dcbst 0, %0; icbi 0, %0; sync; isync;"::"r"(fp->EXC_SRR0));
+		/* restore MSR */
+		fp->EXC_SRR1 = BPNTS[TYPE(cause)].saved_msr;
 
 		rval=(0==BPNTS[TYPE(cause)].usrHdlr ||
 		         BPNTS[TYPE(cause)].usrHdlr(0,fp,BPNTS[TYPE(cause)].usrArg)) ? -1 : 2;

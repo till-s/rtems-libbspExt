@@ -84,9 +84,6 @@ static WrapRec wrappers[] = {
 static void noop(const rtems_irq_connect_data *unused) {};
 static int  noop1(const rtems_irq_connect_data *unused) { return 0;};
 
-#define ISR_STUFF_LOCK() 	bspExtLock()
-#define ISR_STUFF_UNLOCK()	bspExtUnlock()
-
 int
 bspExtRemoveSharedISR(int irqLine, void (*isr)(void *), void *uarg)
 {
@@ -95,7 +92,7 @@ ISR	*preq;
 
 	assert( irqLine >= 0 );
 
-	ISR_STUFF_LOCK();
+	bspExtLock();
 
 		for ( w = wrappers; w < wrappers + NumberOf(wrappers); w++ )
 			if ( w->irqLine == irqLine ) {
@@ -115,13 +112,13 @@ ISR	*preq;
 								assert ( BSP_remove_rtems_irq_handler(&d) );
 								w->irqLine = -1;
 							}
-							ISR_STUFF_UNLOCK();
+							bspExtUnlock();
 							free((void*)found);
 							return 0;
 					}
 				}
 			}
-	ISR_STUFF_UNLOCK();
+	bspExtUnlock();
 	return -1;
 }
 
@@ -140,7 +137,7 @@ ISR	req = malloc(sizeof(*req));
 
 	assert( irqLine >= 0 );
 
-	ISR_STUFF_LOCK();
+	bspExtLock();
 		for ( w=wrappers; w<wrappers+NumberOf(wrappers); w++ ) {
 			if ( w->anchor ) {
 				if ( w->irqLine == irqLine ) {
@@ -179,7 +176,7 @@ ISR	req = malloc(sizeof(*req));
 			}
 		}
 bailout:
-	ISR_STUFF_UNLOCK();
+	bspExtUnlock();
 	free((void*)req);
 	return req != 0;
 }
