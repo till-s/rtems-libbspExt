@@ -191,8 +191,14 @@ unsigned				hid0;
 	}
 
 	if (bspExtVerbosity) {
-		fprintf(stderr,"Warning: bspExtMemProbe kills real-time performance - use only during driver initialization\n\n");
-		fprintf(stderr,"         set the 'bspExtVerbosity' variable to zero to silence this warning\n");
+		hid0=_read_HID0();
+		fprintf(stderr,"Warning: bspExtMemProbe kills real-time performance.\n");
+		if ( !(hid0 & HID0_EMCP) ) {
+		    fprintf(stderr,"         Your BSP has MCP exceptions switched OFF - we\n");
+		    fprintf(stderr,"         must probe with INTERRUPTS DISABLED !!!\n");
+		}
+	    fprintf(stderr,"         use only during driver initialization\n\n");
+		fprintf(stderr,"         clear the 'bspExtVerbosity' variable to silence this warning\n");
 	}
 
 	/* validate arguments and compute jump table index */
