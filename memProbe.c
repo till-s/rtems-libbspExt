@@ -3,6 +3,9 @@
 /* Address Probing for Powerpc - RTEMS
  *
  * Author: Till Straumann <strauman@slac.stanford.edu>
+ *
+ * S. Kate Feng <feng1@bnl.gov> ported it to the MVME5500.(4/2004)
+ *
  */
 
 /*
@@ -57,7 +60,17 @@
 #define SRR1_TEA_EXC    (1<<(31-13))
 #define SRR1_MCP_EXC    (1<<(31-12))
 
+#if defined(mpc7455) || defined(mpc7450)
+SPR_RW(HID1)
+#define _read_HIDx    _read_HID1
+#define _write_HIDx   _write_HID1
+#elif defined(mpc7400) || defined(mpc750) || defined(mpc604) || defined(mpc603)
 SPR_RW(HID0)
+#define _read_HIDx    _read_HID0
+#define _write_HIDx   _write_HID0
+#else
+#error Hmmm what CPU flavor are you using -- is EMPC in HID0 or HID1 ?
+#endif
 
 static exception_handler_t	origHandler=0;
 
@@ -170,10 +183,9 @@ rtems_interrupt_level	level;
 		fprintf(stderr,"Warning: unable to clear pending hostbridge errors; leaving MCP disabled\n");
 		fprintf(stderr,"         proper operation of memory probing not guaranteed\n");
 	} else {
-		/* enable MCP at the hostbridget */
-		_BSP_clear_hostbridge_errors(1,1);
-		/* enable HID0 */
-		_write_HID0( _read_HID0() | HID0_EMCP );
+	     /* enable MCP at the hostbridget */
+	     if (_BSP_clear_hostbridge_errors(1,1) !=-1)
+		_write_HIDx( _read_HIDx() | HID0_EMCP );/* enable MCP */
 	}
 
 	/* switch exception handlers */
@@ -209,7 +221,7 @@ unsigned				hid0;
 	}
 
 	if (bspExtVerbosity) {
-		hid0=_read_HID0();
+		hid0=_read_HIDx();
 		fprintf(stderr,"Warning: bspExtMemProbe kills real-time performance.\n");
 		if ( !(hid0 & HID0_EMCP) ) {
 		    fprintf(stderr,"         Your BSP has MCP exceptions switched OFF - we\n");
@@ -233,7 +245,7 @@ unsigned				hid0;
 	if (write && pval)
 		memcpy(&buf, pval, size);
 
-	hid0=_read_HID0();
+	hid0=_read_HIDx();
 
 	if ( !(hid0 & HID0_EMCP) ) {
 		/* MCP exceptions are not enabled; use
@@ -262,7 +274,6 @@ rtems_interrupt_disable(flags);
 			rval = _BSP_clear_hostbridge_errors(0,1);
 rtems_interrupt_enable(flags);
 	}
-
 
 	if (!write && pval) {
 		memcpy(pval, faultAddr ? (void*)&faultAddr : &buf, size);

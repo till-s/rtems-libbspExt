@@ -40,7 +40,7 @@ include $(RTEMS_ROOT)/make/lib.cfg
 DEFINES  +=
 CPPFLAGS +=
 # inline declarations require -O
-CFLAGS   += -O2 -Winline
+CFLAGS   += -Winline
 
 #
 # Add your list of files to delete here.  The config files
@@ -67,9 +67,9 @@ ${RTEMS_SITE_INSTALLDIR}/include/bsp:
 
 # Install the library, appending _g or _p as appropriate.
 # for include files, just use $(INSTALL_CHANGE)
-install:  all ${RTEMS_SITE_INSTALLDIR}/lib ${RTEMS_SITE_INSTALLDIR}/include/bsp
-	$(INSTALL_VARIANT) -m 644 ${LIB} ${RTEMS_SITE_INSTALLDIR}/lib
-	$(INSTALL_CHANGE) -m 644 ${H_FILES} ${RTEMS_SITE_INSTALLDIR}/include/bsp
+install:  all ${RTEMS_SITE_INSTALLDIR}/lib ${RTEMS_SITE_INSTALLDIR}/include/bsp/
+	$(INSTALL_VARIANT) -m 644 ${LIB} ${RTEMS_SITE_INSTALLDIR}/lib/
+	$(INSTALL_CHANGE) -m 644 ${H_FILES} ${RTEMS_SITE_INSTALLDIR}/include/bsp/
 
 REVISION=$(filter-out $$%,$$Name$$)
 tar:
