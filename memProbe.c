@@ -159,6 +159,25 @@ void
 _bspExtMemProbeInit(void)
 {
 rtems_interrupt_level	level;
+
+	/* try to clear pending errors and enable
+	 * MCP in HID0 on success
+	 */
+
+	/* clear pending errors */
+	_BSP_clear_hostbridge_errors(0,1);
+	/* see if there are still errors pending */
+	if ( _BSP_clear_hostbridge_errors(0,1) ) {
+		fprintf(stderr,"Warning: unable to clear pending hostbridge errors; leaving MCP disabled\n");
+		fprintf(stderr,"         proper operation of memory probing not guaranteed\n");
+	} else {
+		/* enable MCP at the hostbridget */
+		_BSP_clear_hostbridge_errors(1,1);
+		/* enable HID0 */
+		_write_HID0( _read_HID0() | HID0_EMCP );
+	}
+
+	/* switch exception handlers */
 	rtems_interrupt_disable(level);
 	/* install an exception handler to catch
 	 * protection violations

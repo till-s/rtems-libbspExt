@@ -1,0 +1,27 @@
+NOTE ABOUT MEMORY PROBING AND PCI CONFIGURATION SPACE SCANNING
+--------------------------------------------------------------
+
+Memory probing installs an exception handler to 
+catch machine check and data access exceptions
+during a probe operation. Therefore, it runs
+with the MCP interrupt enabled.
+
+Note that this most likely raises exceptions
+when trying to read from PCI configuration
+space at unused slots (e.g. when scanning config
+space for a particular device). Applications
+which need both, memory probing (mostly used by
+VME drivers) AND PCI config space scanning should
+scan PCI once, prior to initializing libBspExt
+and cache the vendor/deviceids found (e.g. as
+done by my SVGM BSP).
+
+PCI drivers loaded after initialization of memory
+probing should then scan the cached info for
+their device to avoid raising exceptions.
+
+This is a better approach than using memory probing
+on PCI config space due to the high overhead and
+latency of memory probing.
+
+Till Straumann, <strauman@slac.stanford.edu>, 2003/7
