@@ -5,11 +5,13 @@
 #       Template library Makefile
 #
 
+RTEMS_MAKEFILE_PATH = $(PROJECT_ROOT)/powerpc-rtems/$(RTEMS_BSP)
+
 LIBNAME=libbspExt.a        # xxx- your library names goes here
 LIB=${ARCH}/${LIBNAME}
 
 # C and C++ source names, if any, go here -- minus the .c or .cc
-C_PIECES=bspExt memProbe cacheUtil
+C_PIECES=bspExt memProbe pciUtils
 C_FILES=$(C_PIECES:%=%.c)
 C_O_FILES=$(C_PIECES:%=${ARCH}/%.o)
 
@@ -38,7 +40,8 @@ include $(RTEMS_ROOT)/make/lib.cfg
 
 DEFINES  +=
 CPPFLAGS +=
-CFLAGS   +=
+# inline declarations require -O
+CFLAGS   += -O2 -Winline
 
 #
 # Add your list of files to delete here.  The config files

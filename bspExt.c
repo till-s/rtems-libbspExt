@@ -6,8 +6,6 @@
 
 rtems_id __bspExtLock=0;
 
-extern long __bspExtGetCacheLineSize(void);
-
 rtems_status_code
 bspExtInit(void)
 {
@@ -20,6 +18,5 @@ if (RTEMS_SUCCESSFUL!=(rval = rtems_semaphore_create(n,1,
 	&__bspExtLock)))
 	return rval;
 
-bspExtCacheLineSize = __bspExtGetCacheLineSize();
 return rval;
 }
