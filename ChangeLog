@@ -1,0 +1,4 @@
+ Changes since release 1.1-beta:
+	- wrapped the braindead IRQ API of the 'new exception handling' BSPs.
+      The new API allows for interrupt sharing (crucial for PCI) and
+      passing an ISR argument (also crucial for PCI / shared interrupts).
