@@ -70,3 +70,7 @@ ${RTEMS_SITE_INSTALLDIR}/include/bsp:
 install:  all ${RTEMS_SITE_INSTALLDIR}/lib ${RTEMS_SITE_INSTALLDIR}/include/bsp
 	$(INSTALL_VARIANT) -m 644 ${LIB} ${RTEMS_SITE_INSTALLDIR}/lib
 	$(INSTALL_CHANGE) -m 644 ${H_FILES} ${RTEMS_SITE_INSTALLDIR}/include/bsp
+
+REVISION=$(filter-out $$%,$$Name$$)
+tar:
+	@$(make-tar)
