@@ -123,5 +123,14 @@ bspExtInstallDataBreakpoint(void *dataAddr, int mode, BspExtBpntHdlr usrHandler,
 rtems_status_code
 bspExtRemoveDataBreakpoint(void *dataAddr, int mode, BspExtBpntHdlr usrHandler, void *usrArg);
 
+/* Silence warnings by setting this variable to zero:
+ *
+ *    0 -- silent
+ *    1 -- warnings
+ *    2 -- info
+ * >= 3 -- debugging
+ * 
+ */ 
+extern int bspExtVerbosity;
 
 #endif

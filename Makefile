@@ -57,7 +57,6 @@ all:	${ARCH} $(SRCS) $(LIB)
 $(LIB): ${OBJS}
 	$(make-library)
 
-<<<<<<< Makefile
 ifndef RTEMS_SITE_INSTALLDIR
 RTEMS_SITE_INSTALLDIR = $(PROJECT_RELEASE)
 endif
@@ -66,21 +65,8 @@ ${RTEMS_SITE_INSTALLDIR}/lib \
 ${RTEMS_SITE_INSTALLDIR}/include/bsp:
 	test -d $@ || mkdir -p $@
 
-=======
-ifndef RTEMS_SITE_INSTALLDIR
-RTEMS_SITE_INSTALLDIR = $(PROJECT_RELEASE)
-endif
-
-${RTEMS_SITE_INSTALLDIR}/lib:
-	test -d $@ || mkdir -p $@
-
-${RTEMS_SITE_INSTALLDIR}/include/bsp:
-	test -d $@ || mkdir -p $@
-
->>>>>>> 1.6
 # Install the library, appending _g or _p as appropriate.
 # for include files, just use $(INSTALL_CHANGE)
-<<<<<<< Makefile
 install:  all ${RTEMS_SITE_INSTALLDIR}/lib ${RTEMS_SITE_INSTALLDIR}/include/bsp
 	$(INSTALL_VARIANT) -m 644 ${LIB} ${RTEMS_SITE_INSTALLDIR}/lib
 	$(INSTALL_CHANGE) -m 644 ${H_FILES} ${RTEMS_SITE_INSTALLDIR}/include/bsp
@@ -88,8 +74,3 @@ install:  all ${RTEMS_SITE_INSTALLDIR}/lib ${RTEMS_SITE_INSTALLDIR}/include/bsp
 REVISION=$(filter-out $$%,$$Name$$)
 tar:
 	@$(make-tar)
-=======
-install:  all ${RTEMS_SITE_INSTALLDIR}/lib ${RTEMS_SITE_INSTALLDIR}/include/bsp
-	$(INSTALL_VARIANT) -m 644 ${LIB} ${RTEMS_SITE_INSTALLDIR}/lib
-	$(INSTALL_CHANGE) -m 644 ${H_FILES} ${RTEMS_SITE_INSTALLDIR}/include/bsp
->>>>>>> 1.6

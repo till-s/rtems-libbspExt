@@ -55,6 +55,8 @@ rtems_id __bspExtLock=0;
 
 extern void _bspExtMemProbeInit(void);
 
+int bspExtVerbosity = 1;
+
 rtems_status_code
 bspExtInit(void)
 {

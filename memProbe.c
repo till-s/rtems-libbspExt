@@ -49,6 +49,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <bsp.h>
+#include <rtems/bspIo.h>
 #include <assert.h>
 
 #include <libcpu/spr.h>
@@ -109,13 +110,11 @@ __asm__(
 extern int
 _bspExtCatchDabr(BSP_Exception_frame*);
 
-long memProbeDebug=0;
-
 static void
 bspExtExceptionHandler(BSP_Exception_frame* excPtr)
 {
-void *nip=(void*)excPtr->EXC_SRR0;
-int	caughtDabr;
+void		*nip = (void*)excPtr->EXC_SRR0;
+int			caughtDabr;
 
 	/* is this a memProbe? */
 	if (nip>=(void*)memProbeByte && nip<(void*)memProbeEnd) {
@@ -131,7 +130,13 @@ int	caughtDabr;
 		 */
  		/* clear MCP condition */
  		if ( (SRR1_TEA_EXC|SRR1_MCP_EXC) & excPtr->EXC_SRR1 ) {
- 			_BSP_clear_hostbridge_errors(1,1);
+			unsigned status;
+ 			status = _BSP_clear_hostbridge_errors(1,1);
+			if ( bspExtVerbosity > 1 ) {
+				printk("Machine check [%s]; host bridge status 0x%08x\n",
+						excPtr->EXC_SRR1 & SRR1_TEA_EXC ? "TEA" : "MCP",
+						status);
+			}
  		}
 		return;
 	} else if ((caughtDabr=_bspExtCatchDabr(excPtr))) {
@@ -170,19 +175,25 @@ rtems_interrupt_level	level;
 rtems_status_code
 bspExtMemProbe(void *addr, int write, int size, void *pval)
 {
-rtems_status_code	rval=RTEMS_SUCCESSFUL;
-unsigned	long buf;
-MemProber	probe;
-void		*faultAddr;
-unsigned	flags=0;
-unsigned	hid0;
+rtems_status_code		rval=RTEMS_SUCCESSFUL;
+rtems_interrupt_level	flags=0;
+unsigned long			buf;
+MemProber				probe;
+void					*faultAddr;
+unsigned				hid0;
 
 	/* lazy init (not strictly thread safe!) */
 	if (!origHandler) bspExtInit();
 
-	assert(bspExtExceptionHandler==globalExceptHdl);
+	if (bspExtExceptionHandler!=globalExceptHdl) {
+		fprintf(stderr,"bspExtMemProbe: Someone changed the exception handler - refuse to probe\n");
+		return -1;
+	}
 
-	fprintf(stderr,"Warning: bspExtMemProbe kills real-time performance - use only during initialization\n");
+	if (bspExtVerbosity) {
+		fprintf(stderr,"Warning: bspExtMemProbe kills real-time performance - use only during driver initialization\n\n");
+		fprintf(stderr,"         set the 'bspExtVerbosity' variable to zero to silence this warning\n");
+	}
 
 	/* validate arguments and compute jump table index */
 	switch (size) {
