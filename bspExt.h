@@ -187,4 +187,38 @@ bspExtRemoveSharedISR(int name, void (*isr)(void *uarg), void *uarg);
 void bspExtLock();
 void bspExtUnlock();
 
+/* Exception Handlers */
+
+/* An exception handler
+ *
+ * RETURNS 0 if the exception was 'caught', nonzero otherwise.
+ *
+ * The library traverses the list of registered handlers
+ * executing them. If a handler returns 0, list traversion
+ * is aborted and control returned.
+ * If none of the registered handlers catches the exception,
+ * control is passed on to the BSP's original handler.
+ */
+int BspExtExceptionHandler(BSP_Exception_frame *f, void *usrData);
+
+typedef int (*BspExtEHandler)(BSP_Exception_frame *, void *);
+
+/* NOTE: These routines temporarily disable interrupts */
+
+/*
+ * Register an exception handler at the head (where > 0) or tail
+ * (where <=0).
+ *
+ * RETURNS: 0 on success, -1 on failure (handler already installed
+ *          or no memory).
+ *
+ */
+int bspExtInstallEHandler(BspExtEHandler h, void *usrData, int where);
+
+/* Remove an exception handler
+ *
+ * RETURNS: 0 on success, nonzero if handler/usrData pair not found
+ */
+int bspExtRemoveEHandler(BspExtEHandler h, void *usrData);
+
 #endif

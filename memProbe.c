@@ -50,6 +50,7 @@
 #include "bspExt.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <bsp.h>
 #include <rtems/bspIo.h>
@@ -71,6 +72,14 @@ SPR_RW(HID0)
 #else
 #error Hmmm what CPU flavor are you using -- is EMPC in HID0 or HID1 ?
 #endif
+
+typedef struct EH_NodeRec_ {
+	BspExtEHandler	   h;
+	void			   *d;
+	struct EH_NodeRec_ *n;
+} EH_NodeRec, *EH_Node;
+
+static EH_Node anchor = 0;
 
 static exception_handler_t	origHandler=0;
 
@@ -163,7 +172,16 @@ int			caughtBr;
 				return;
 		}
 	}
-	/* default handler */
+	/* Work the list of registered handlers */
+	{
+	EH_Node p;
+	for ( p = anchor; p; p=p->n ) {
+		if ( 0 == (*p->h)(excPtr, p->d) )
+			return;
+	}
+	}
+
+	/* resort to BSP handler */
 	origHandler(excPtr);
 }
 
@@ -185,7 +203,7 @@ rtems_interrupt_level	level;
 	} else {
 	     /* enable MCP at the hostbridget */
 	     if (_BSP_clear_hostbridge_errors(1,1) !=-1)
-		_write_HIDx( _read_HIDx() | HID0_EMCP );/* enable MCP */
+			_write_HIDx( _read_HIDx() | HID0_EMCP );/* enable MCP */
 	}
 
 	/* switch exception handlers */
@@ -281,78 +299,75 @@ rtems_interrupt_enable(flags);
 	return rval;
 }
 
-
-#if 0
-rtems_status_code
-bspExtMemProbe(void *addr, int write, int size, void *pval)
+/*
+ * Register an exception handler at the head (where > 0) or tail
+ * (where <=0).
+ *
+ * RETURNS: 0 on success, -1 on failure (handler already installed
+ *          or no memory).
+ *
+ */
+int
+bspExtInstallEHandler(BspExtEHandler h, void *usrData, int where)
 {
-rtems_status_code	rval=RTEMS_SUCCESSFUL;
-void		  	*fac;
-rtems_interrupt_level	level;
-unsigned char		buf[4];
+EH_Node       n=0, *pp;
+unsigned long flags;
+int           rval = -1;
 
-	memset(buf,'0',sizeof(buf));
+	if ( !(n=malloc(sizeof(*n))) )
+		return -1;
 
-	/* check arguments */
-	if (!__bspExtLock) return RTEMS_NOT_DEFINED;
-	if (!pval) pval=buf;
-
-	/* obtain lock */
-	if (RTEMS_SUCCESSFUL !=
-		(rval=rtems_semaphore_obtain(__bspExtLock, RTEMS_WAIT, RTEMS_NO_TIMEOUT)))
-		return rval;
-
-	rtems_interrupt_disable(level);
-	faultAddress = 0;
-	/* install an exception handler to catch
-	 * protection violations
-	 */
-	origHandler=globalExceptHdl;
-	globalExceptHdl = catch_prot;
-
-	/* make sure handler is swapped */
-	__asm__ __volatile__ ("sync");
-
-	/* note that taking the exception is context synchronizing */
-	/* try to access memory */
-	__asm__ __volatile__(
-		"memProbeByteRead:	\n"
-		"	lbz %0, 0(%1)	\n"
-		"	b memProbeDone	\n"
-		:
-		:
-		:);
-#define CASE(type)	\
-	case sizeof(type): if (write) *(type *) addr = *(type *)pval; \
-                           else       *(type *) pval = *(type *)addr; \
-			   break
-	switch (size) {
-		CASE(unsigned char);
-		CASE(unsigned short);
-		CASE(unsigned long);
-		default: /* should never get here */
-			globalExceptHdl = save;
-			rtems_interrupt_enable(level);
-			rval=RTEMS_INVALID_SIZE;
-			goto cleanup;
+bspExtLock();
+	for ( pp=&anchor; *pp; pp=&(*pp)->n ) {
+		if ( (*pp)->h == h && (*pp)->d == usrData )
+			goto bail;
 	}
-	/* get a copy of the fault address before re-enabling
-	 * interrupts (could be that somebody else generates
-	 * an access violation exception here)
-	 */
-	__asm__ __volatile__ ("sync");
-	fac = faultAddress;
-	globalExceptHdl = save;
-	__asm__ __volatile__ ("sync");
-	rtems_interrupt_enable(level);
-
-	if (fac) {
-		rval = RTEMS_INVALID_ADDRESS;
+	/* pp now points to the tail */
+	n->h = h;
+	n->d = usrData;
+	if ( where ) {
+		/* reset to head */
+		pp = &anchor;
 	}
 
-	/* on error return RTEMS_INVALID_ADDRESS */
-cleanup:
-	rtems_semaphore_release(__bspExtLock);
+	rtems_interrupt_disable(flags);
+		n->n = *pp;
+		*pp  = n;
+	rtems_interrupt_enable(flags);
+
+	n    = 0;
+	rval = 0;
+
+bail:
+bspExtUnlock();
+	free(n);
 	return rval;
 }
-#endif
+
+/* Remove an exception handler
+ *
+ * RETURNS: 0 on success, nonzero if handler/usrData pair not found
+ */
+int bspExtRemoveEHandler(BspExtEHandler h, void *usrData)
+{
+EH_Node       p = 0, *pp;
+unsigned long flags;
+
+	bspExtLock();
+	for ( pp = &anchor; *pp; pp = &(*pp)->n ) {
+		if ( (*pp)->h == h && (*pp)->d == usrData ) {
+			rtems_interrupt_disable(flags);
+			p = *pp;
+			*pp = p->n;
+			rtems_interrupt_enable(flags);
+			break;
+		}
+	}
+	bspExtUnlock();
+
+	free(p);
+
+	return 0 == p;
+}
+
+
