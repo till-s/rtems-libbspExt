@@ -51,8 +51,12 @@
 #include <bsp.h>
 #include <assert.h>
 
+#include <libcpu/spr.h>
+
 #define SRR1_TEA_EXC    (1<<(31-13))
 #define SRR1_MCP_EXC    (1<<(31-12))
+
+SPR_RW(HID0)
 
 static exception_handler_t	origHandler=0;
 
@@ -68,34 +72,44 @@ static exception_handler_t	origHandler=0;
 
 typedef void * (*MemProber)(void *rval, void *from, void *to);
 
-static void * memProbeByte(void *rval, void *from, void *to);
-static void * memProbeShort(void *rval, void *from, void *to);
-static void * memProbeLong(void *rval, void *from, void *to);
-static void * memProbeEnd(void);
+void * memProbeByte(void *rval, void *from, void *to);
+void * memProbeShort(void *rval, void *from, void *to);
+void * memProbeLong(void *rval, void *from, void *to);
+void * memProbeEnd(void);
 
 
 __asm__(
-	".LOCAL memProbeByte, memProbeShort, memProbeLong, memProbeEnd\n"
+	".text\n"
+	".GLOBAL memProbeByte, memProbeShort, memProbeLong, memProbeEnd\n"
 	"memProbeByte:		\n"
 	"	lbz %r4, 0(%r4) \n"
 	"	stb %r4, 0(%r5) \n"
-	"	sync	\n"
-	"	blr		\n"
+	"	b	1f			\n"
 	"memProbeShort:		\n"
 	"	lhz %r4, 0(%r4) \n"
 	"	sth %r4, 0(%r5) \n"
-	"	sync	\n"
-	"	blr		\n"
+	"	b	1f			\n"
 	"memProbeLong:		\n"
 	"	lwz %r4, 0(%r4) \n"
 	"	stw %r4, 0(%r5) \n"
-	"	sync	\n"
+	"1:	sync            \n"
+	"   nop             \n"	/* could take some time until MCP is asserted */
+	"   nop             \n"
+	"   nop             \n"
+	"   nop             \n"
+	"   nop             \n"
+	"   nop             \n"
+	"   nop             \n"
+	"   nop             \n"
+	"   sync            \n"
 	"memProbeEnd:		\n"
-	"	blr		\n"
+	"   blr				\n"
 );
 
 extern int
 _bspExtCatchDabr(BSP_Exception_frame*);
+
+long memProbeDebug=0;
 
 static void
 bspExtExceptionHandler(BSP_Exception_frame* excPtr)
@@ -115,10 +129,10 @@ int	caughtDabr;
 		/* NOTE DAR is not valid at this point because some boards
     	 * raise a machine check which doesn't set DAR...
 		 */
-		/* clear MCP condition */
-		if ( (SRR1_TEA_EXC|SRR1_MCP_EXC) & excPtr->EXC_SRR1 ) {
-			_BSP_clear_hostbridge_errors(0,1);
-		}
+ 		/* clear MCP condition */
+ 		if ( (SRR1_TEA_EXC|SRR1_MCP_EXC) & excPtr->EXC_SRR1 ) {
+ 			_BSP_clear_hostbridge_errors(1,1);
+ 		}
 		return;
 	} else if ((caughtDabr=_bspExtCatchDabr(excPtr))) {
 		switch (caughtDabr) {
@@ -152,6 +166,7 @@ rtems_interrupt_level	level;
 	rtems_interrupt_enable(level);
 }
 
+
 rtems_status_code
 bspExtMemProbe(void *addr, int write, int size, void *pval)
 {
@@ -159,11 +174,15 @@ rtems_status_code	rval=RTEMS_SUCCESSFUL;
 unsigned	long buf;
 MemProber	probe;
 void		*faultAddr;
+unsigned	flags=0;
+unsigned	hid0;
 
-	/* lazy init */
+	/* lazy init (not strictly thread safe!) */
 	if (!origHandler) bspExtInit();
 
 	assert(bspExtExceptionHandler==globalExceptHdl);
+
+	fprintf(stderr,"Warning: bspExtMemProbe kills real-time performance - use only during initialization\n");
 
 	/* validate arguments and compute jump table index */
 	switch (size) {
@@ -176,21 +195,42 @@ void		*faultAddr;
 	/* use a buffer to make sure we don't end up
 	 * probing 'pval'...
 	 */
+	if (write && pval)
+		memcpy(&buf, pval, size);
+
+	hid0=_read_HID0();
+
+	if ( !(hid0 & HID0_EMCP) ) {
+		/* MCP exceptions are not enabled; use
+		 * exclusive access to host bridge status
+		 * - data access exceptions still work...
+		 */
+rtems_interrupt_disable(flags);
+		_BSP_clear_hostbridge_errors(0,1);
+	}
+
 	if (write) {
-		if (pval)
-			memcpy(&buf,pval,size);
 		if ((faultAddr=probe(0,&buf,addr)))
 			rval=RTEMS_INVALID_ADDRESS;
 	} else {
 		if ((faultAddr=probe(0,addr,&buf))) {
 			rval=RTEMS_INVALID_ADDRESS;
 			/* pass them the fault address back */
-			if (pval)
-				memcpy(pval,&faultAddr,size);
-		} else {
-			if (pval)
-				memcpy(pval,&buf,size);
 		}
+	}
+
+	if ( !(hid0 & HID0_EMCP) ) {
+		/* MCP exceptions are not enabled; use
+		 * exclusive access to host bridge status
+		 */
+		if (!faultAddr)
+			rval = _BSP_clear_hostbridge_errors(0,1);
+rtems_interrupt_enable(flags);
+	}
+
+
+	if (!write && pval) {
+		memcpy(pval, faultAddr ? (void*)&faultAddr : &buf, size);
 	}
 	return rval;
 }
