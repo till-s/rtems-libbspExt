@@ -61,9 +61,7 @@ ifndef RTEMS_SITE_INSTALLDIR
 RTEMS_SITE_INSTALLDIR = $(PROJECT_RELEASE)
 endif
 
-${RTEMS_SITE_INSTALLDIR}/lib:
-	test -d $@ || mkdir -p $@
-
+${RTEMS_SITE_INSTALLDIR}/lib \
 ${RTEMS_SITE_INSTALLDIR}/include/bsp:
 	test -d $@ || mkdir -p $@
 
