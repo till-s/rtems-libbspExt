@@ -116,12 +116,33 @@ typedef int (*BspExtBpntHdlr)(int before, BSP_Exception_frame *frame, void *usrA
 rtems_status_code
 bspExtInstallDataBreakpoint(void *dataAddr, int mode, BspExtBpntHdlr usrHandler, void *usrArg);
 
+/* install an instruction access breakpoint to 'addr'
+ *
+ * ARGUMENTS:
+ *  - 'addr': an exception will be raised by the hardware upon an
+ *            instruction access to this address.
+ *
+ * NOTE: only 1 IABR is supported.
+ */
+
+rtems_status_code
+bspExtInstallBreakpoint(void *addr, BspExtBpntHdlr usrHandler, void *usrArg);
+
+
 /* remove a data access breakpoint. Note that this routine only
- * succeeds if the supplied parameters match the installed breakpoint.
- * Exception: 'dataAddr==NULL' will remove _any_ breakpoint.
+ * succeeds if the supplied parameter matches the installed breakpoint.
+ * Exception: 'dataAddr==NULL' will remove _any_ (data access) breakpoint.
  */
 rtems_status_code
-bspExtRemoveDataBreakpoint(void *dataAddr, int mode, BspExtBpntHdlr usrHandler, void *usrArg);
+bspExtRemoveDataBreakpoint(void *dataAddr);
+
+/* remove an instruction access breakpoint. Note that this routine only
+ * succeeds if the supplied parameter matches the installed breakpoint.
+ * Exception: 'addr==NULL' will remove _any_ (instruction) breakpoint.
+ */
+rtems_status_code
+bspExtRemoveBreakpoint(void *addr);
+
 
 /* Silence warnings by setting this variable to zero:
  *
@@ -161,5 +182,9 @@ bspExtInstallSharedISR(int name, void (*isr)(void *uarg), void * uarg, int flags
  */
 int
 bspExtRemoveSharedISR(int name, void (*isr)(void *uarg), void *uarg);
+
+/* Lock unlock critical sections of the libary */
+void bspExtLock();
+void bspExtUnlock();
 
 #endif

@@ -84,10 +84,8 @@ static WrapRec wrappers[] = {
 static void noop(const rtems_irq_connect_data *unused) {};
 static int  noop1(const rtems_irq_connect_data *unused) { return 0;};
 
-extern rtems_id __bspExtLock;
-
-#define ISR_STUFF_LOCK() 	rtems_semaphore_obtain(__bspExtLock, RTEMS_WAIT, RTEMS_NO_TIMEOUT)
-#define ISR_STUFF_UNLOCK()	rtems_semaphore_release(__bspExtLock)
+#define ISR_STUFF_LOCK() 	bspExtLock()
+#define ISR_STUFF_UNLOCK()	bspExtUnlock()
 
 int
 bspExtRemoveSharedISR(int irqLine, void (*isr)(void *), void *uarg)

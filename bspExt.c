@@ -49,9 +49,22 @@
 #include "bspExt.h"
 
 #include <stdio.h>
+#include <assert.h>
 #include <bsp.h>
 
-rtems_id __bspExtLock=0;
+static rtems_id __bspExtLock=0;
+
+void
+bspExtLock()
+{
+	assert ( RTEMS_SUCCESSFUL == rtems_semaphore_obtain(__bspExtLock, RTEMS_WAIT, RTEMS_NO_TIMEOUT ) );
+}
+
+void
+bspExtUnlock()
+{
+	assert ( RTEMS_SUCCESSFUL == rtems_semaphore_release(__bspExtLock ) );
+}
 
 extern void _bspExtMemProbeInit(void);
 

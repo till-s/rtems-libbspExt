@@ -108,13 +108,13 @@ __asm__(
 );
 
 extern int
-_bspExtCatchDabr(BSP_Exception_frame*);
+_bspExtCatchBreakpoint(BSP_Exception_frame *fp);
 
 static void
 bspExtExceptionHandler(BSP_Exception_frame* excPtr)
 {
 void		*nip = (void*)excPtr->EXC_SRR0;
-int			caughtDabr;
+int			caughtBr;
 
 	/* is this a memProbe? */
 	if (nip>=(void*)memProbeByte && nip<(void*)memProbeEnd) {
@@ -139,8 +139,8 @@ int			caughtDabr;
 			}
  		}
 		return;
-	} else if ((caughtDabr=_bspExtCatchDabr(excPtr))) {
-		switch (caughtDabr) {
+	} else if ((caughtBr=_bspExtCatchBreakpoint(excPtr))) {
+		switch (caughtBr) {
 			default: /* should never get here */
 			case -1: /* usr handler wants us to panic */
 				break;
@@ -150,7 +150,6 @@ int			caughtDabr;
 				return;
 		}
 	}
-
 	/* default handler */
 	origHandler(excPtr);
 }
