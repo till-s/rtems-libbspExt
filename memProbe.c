@@ -14,23 +14,14 @@ catch_prot(BSP_Exception_frame* excPtr)
 		/* nested call */
 		save(excPtr);
 	} else {
-		faultAddress=excPtr->EXC_DAR;
+		faultAddress=(void*)excPtr->EXC_DAR;
 		excPtr->EXC_SRR0+=4; /* skip faulting instruction */
 	}
 /*__asm__ __volatile__("mfspr %0, %1": "=r" (faultAddress) : "i"(DAR));*/
 }
 
-static rtems_id bspExtLock=0;
+extern rtems_id __bspExtLock;
 
-rtems_status_code
-bspExtInit(void)
-{
-rtems_name n=rtems_build_name('B','E','L','K');
-return rtems_semaphore_create(n,1,
-	RTEMS_SIMPLE_BINARY_SEMAPHORE,// | RTEMS_INHERIT_PRIORITY,
-	0,
-	&bspExtLock);
-}
 
 rtems_status_code
 bspExtMemProbe(void *addr, int write, int size, void *pval)
@@ -43,12 +34,12 @@ unsigned char		buf[4];
 	memset(buf,'0',sizeof(buf));
 
 	/* check arguments */
-	if (!bspExtLock) return RTEMS_NOT_DEFINED;
+	if (!__bspExtLock) return RTEMS_NOT_DEFINED;
 	if (!pval) pval=buf;
 
 	/* obtain lock */
 	if (RTEMS_SUCCESSFUL !=
-		(rval=rtems_semaphore_obtain(bspExtLock, RTEMS_WAIT, RTEMS_NO_TIMEOUT)))
+		(rval=rtems_semaphore_obtain(__bspExtLock, RTEMS_WAIT, RTEMS_NO_TIMEOUT)))
 		return rval;
 
 	rtems_interrupt_disable(level);
@@ -90,6 +81,6 @@ unsigned char		buf[4];
 
 	/* on error return RTEMS_INVALID_ADDRESS */
 cleanup:
-	rtems_semaphore_release(bspExtLock);
+	rtems_semaphore_release(__bspExtLock);
 	return rval;
 }
