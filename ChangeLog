@@ -1,3 +1,10 @@
+ Changes since release 1.2-beta:
+	- IABR handler support
+	- improved DABR support
+	- ABI for hooking into exception handler
+	- merged Kate Feng's modifications for supporting 7450 CPUs
+    - don't enable MCP in hid0 fi clear_hostbridge_errors() returns -1
+      (give the BSP a chance to indicate that there *is* no MCP line)
  Changes since release 1.1-beta:
 	- wrapped the braindead IRQ API of the 'new exception handling' BSPs.
       The new API allows for interrupt sharing (crucial for PCI) and
