@@ -11,7 +11,7 @@ LIBNAME=libbspExt.a        # xxx- your library names goes here
 LIB=${ARCH}/${LIBNAME}
 
 # C and C++ source names, if any, go here -- minus the .c or .cc
-C_PIECES=bspExt memProbe pciUtils
+C_PIECES=bspExt memProbe dabrBpnt
 C_FILES=$(C_PIECES:%=%.c)
 C_O_FILES=$(C_PIECES:%=${ARCH}/%.o)
 
@@ -62,3 +62,4 @@ $(LIB): ${OBJS}
 # for include files, just use $(INSTALL_CHANGE)
 install:  all
 	$(INSTALL_VARIANT) -m 644 ${LIB} ${PROJECT_RELEASE}/lib
+	$(INSTALL_CHANGE) -m 644 ${H_FILES} ${PROJECT_RELEASE}/lib/include/bsp

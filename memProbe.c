@@ -3,26 +3,144 @@
 
 #include <stdio.h>
 #include <bsp.h>
+#include <assert.h>
 
-static exception_handler_t	save=0;
-static void *faultAddress=0;
+static exception_handler_t	origHandler=0;
+
+/* lowlevel memory probing routines conforming to
+ * the PPC SVR4 ABI.
+ * Note: r3, i.e. the return value is modified
+ *       (implicitely) by the exeption handler
+ *       the routines return the fault address
+ *       if an exception was detected, hence
+ *       the first argument should be set e.g.
+ *       to 0 when calling the probe routine.
+ */
+
+typedef void * (*MemProber)(void *rval, void *from, void *to);
+
+static void * memProbeByte(void *rval, void *from, void *to);
+static void * memProbeShort(void *rval, void *from, void *to);
+static void * memProbeLong(void *rval, void *from, void *to);
+static void * memProbeEnd(void);
+
+
+__asm__(
+	".LOCAL memProbeByte, memProbeShort, memProbeLong, memProbeEnd\n"
+	"memProbeByte:		\n"
+	"	lbz %r4, 0(%r4) \n"
+	"	stb %r4, 0(%r5) \n"
+	"	blr		\n"
+	"memProbeShort:		\n"
+	"	lhz %r4, 0(%r4) \n"
+	"	sth %r4, 0(%r5) \n"
+	"	blr		\n"
+	"memProbeLong:		\n"
+	"	lwz %r4, 0(%r4) \n"
+	"	stw %r4, 0(%r5) \n"
+	"memProbeEnd:		\n"
+	"	blr		\n"
+);
+
+extern int
+_bspExtCatchDabr(BSP_Exception_frame*);
 
 static void
-catch_prot(BSP_Exception_frame* excPtr)
+bspExtExceptionHandler(BSP_Exception_frame* excPtr)
 {
-	if (faultAddress) {
-		/* nested call */
-		save(excPtr);
-	} else {
-		faultAddress=(void*)excPtr->EXC_DAR;
-		excPtr->EXC_SRR0+=4; /* skip faulting instruction */
+void *nip=(void*)excPtr->EXC_SRR0;
+int	caughtDabr;
+
+	/* is this a memProbe? */
+	if (nip>=(void*)memProbeByte && nip<(void*)memProbeEnd) {
+		/* well, we assume that the branch
+		 * instructions between memProbeByte and memProbeLong
+		 * are safe and dont fault...
+		 */
+		/* flag the fault */
+		excPtr->GPR3=(unsigned)nip;
+		excPtr->EXC_SRR0 +=4;	/* skip the faulting instruction */
+		/* NOTE DAR is not valid at this point because some boards
+       		 * raise a machine check which doesn't set DAR...
+		 */
+		return;
+	} else if ((caughtDabr=_bspExtCatchDabr(excPtr))) {
+		switch (caughtDabr) {
+			default: /* should never get here */
+			case -1: /* usr handler wants us to panic */
+				break;
+
+			case  1: /* phase 1; dabr deinstalled, complete data access */
+			case  2: /* phase 2; stopped after completing faulting instruction */
+				return;
+		}
 	}
-/*__asm__ __volatile__("mfspr %0, %1": "=r" (faultAddress) : "i"(DAR));*/
+
+	/* default handler */
+	origHandler(excPtr);
 }
 
-extern rtems_id __bspExtLock;
+void
+_bspExtMemProbeInit(void)
+{
+rtems_interrupt_level	level;
+	rtems_interrupt_disable(level);
+	/* install an exception handler to catch
+	 * protection violations
+	 */
+	origHandler=globalExceptHdl;
+	globalExceptHdl = bspExtExceptionHandler;
+
+	/* make sure handler is swapped */
+	__asm__ __volatile__ ("sync");
+	rtems_interrupt_enable(level);
+}
+
+rtems_status_code
+bspExtMemProbe(void *addr, int write, int size, void *pval)
+{
+rtems_status_code	rval=RTEMS_SUCCESSFUL;
+unsigned char	buf[4];
+MemProber	probe;
+void		*faultAddr;
+
+	/* lazy init */
+	if (!origHandler) bspExtInit();
+
+	assert(bspExtExceptionHandler==globalExceptHdl);
+
+	/* validate arguments and compute jump table index */
+	switch (size) {
+		case sizeof(char):  probe=memProbeByte; break;
+		case sizeof(short): probe=memProbeShort; break;
+		case sizeof(long):  probe=memProbeLong; break;
+		default: return RTEMS_INVALID_SIZE;
+	}
+
+	/* use a buffer to make sure we don't end up
+	 * probing 'pval'...
+	 */
+	if (write) {
+		if (pval)
+			memcpy(buf,pval,size);
+		if ((faultAddr=probe(0,buf,addr)))
+			rval=RTEMS_INVALID_ADDRESS;
+	} else {
+		if ((faultAddr=probe(0,addr,buf))) {
+			rval=RTEMS_INVALID_ADDRESS;
+			/* pass them the fault address back */
+			if (pval)
+				memcpy(pval,&faultAddr,size);
+		} else {
+			if (pval)
+				memcpy(pval,buf,size);
+		}
+	}
+	return rval;
+}
 
 
+#if 0
 rtems_status_code
 bspExtMemProbe(void *addr, int write, int size, void *pval)
 {
@@ -47,10 +165,21 @@ unsigned char		buf[4];
 	/* install an exception handler to catch
 	 * protection violations
 	 */
-	save=globalExceptHdl;
+	origHandler=globalExceptHdl;
 	globalExceptHdl = catch_prot;
+
+	/* make sure handler is swapped */
+	__asm__ __volatile__ ("sync");
+
 	/* note that taking the exception is context synchronizing */
 	/* try to access memory */
+	__asm__ __volatile__(
+		"memProbeByteRead:	\n"
+		"	lbz %0, 0(%1)	\n"
+		"	b memProbeDone	\n"
+		:
+		:
+		:);
 #define CASE(type)	\
 	case sizeof(type): if (write) *(type *) addr = *(type *)pval; \
                            else       *(type *) pval = *(type *)addr; \
@@ -84,3 +213,4 @@ cleanup:
 	rtems_semaphore_release(__bspExtLock);
 	return rval;
 }
+#endif

@@ -4,7 +4,10 @@
 
 long bspExtCacheLineSize=0;
 
-/* determine the machine's cache line size */
+/* determine the machine's cache line size
+ * NOTE: this works only on an enabled cache
+ *       it raises an exception otherwise...
+ */
 
 #define MAX_DETECT 128
 long __bspExtGetCacheLineSize(void)
