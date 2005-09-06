@@ -227,9 +227,9 @@ int				cause = -1;
 	if ( ! (PHASE2 & cause) ) {
 		/* temporarily disable breakpoint */
 		if ( DBPNT == TYPE(cause) ) {
-			__asm__ __volatile__("mfspr %0, %2; andc %0, %0, %1; mtspr %2, %0"::"r"(tmp),"r"(DABR_WR|DABR_RD),"i"(R_DABR));
+			__asm__ __volatile__("mfspr %0, %2; andc %0, %0, %1; mtspr %2, %0; isync"::"r"(tmp),"r"(DABR_WR|DABR_RD),"i"(R_DABR));
 		} else {
-			__asm__ __volatile__("mfspr %0, %2; andc %0, %0, %1; mtspr %2, %0"::"r"(tmp),"r"(IABR_BE),"i"(R_IABR));
+			__asm__ __volatile__("mfspr %0, %2; andc %0, %0, %1; mtspr %2, %0; isync"::"r"(tmp),"r"(IABR_BE),"i"(R_IABR));
 		}
 
 		/* save MSR; enable single step mode */
@@ -255,9 +255,9 @@ int				cause = -1;
 	 	 * the target memory location...
 	 	 */
 		if ( DBPNT == TYPE(cause) ) {
-			__asm__ __volatile__("mfspr %0, %2; or %0, %0, %1; mtspr %2, %0"::"r"(tmp),"r"(BPNTS[DBPNT].mode&DABR_FLGS),"i"(R_DABR));
+			__asm__ __volatile__("mfspr %0, %2; or %0, %0, %1; mtspr %2, %0; isync"::"r"(tmp),"r"(BPNTS[DBPNT].mode&DABR_FLGS),"i"(R_DABR));
 		} else {
-			__asm__ __volatile__("mfspr %0, %2; or %0, %0, %1; mtspr %2, %0"::"r"(tmp),"r"(IABR_FLGS),"i"(R_IABR));
+			__asm__ __volatile__("mfspr %0, %2; or %0, %0, %1; mtspr %2, %0; isync"::"r"(tmp),"r"(IABR_FLGS),"i"(R_IABR));
 		}
 	}
 return rval;
