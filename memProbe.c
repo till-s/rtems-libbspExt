@@ -125,8 +125,9 @@ __asm__(
 	"   nop             \n"
 	"   nop             \n"
 	"   sync            \n"
-	"memProbeEnd:		\n"
-	"   blr				\n"
+	"memProbeEnd:       \n"
+	"   blr             \n"
+	".data              \n"
 );
 
 extern int
@@ -185,6 +186,8 @@ int			caughtBr;
 	origHandler(excPtr);
 }
 
+static int useMcp = 0;
+
 void
 _bspExtMemProbeInit(void)
 {
@@ -201,9 +204,11 @@ rtems_interrupt_level	level;
 		fprintf(stderr,"Warning: unable to clear pending hostbridge errors; leaving MCP disabled\n");
 		fprintf(stderr,"         proper operation of memory probing not guaranteed\n");
 	} else {
-	     /* enable MCP at the hostbridget */
-	     if (_BSP_clear_hostbridge_errors(1,1) !=-1)
+	     /* enable MCP at the hostbridge */
+	     if (_BSP_clear_hostbridge_errors(1,1) !=-1) {
+			useMcp = 1;
 			_write_HIDx( _read_HIDx() | HID0_EMCP );/* enable MCP */
+		 }
 	}
 
 	/* switch exception handlers */
@@ -228,7 +233,6 @@ rtems_interrupt_level	flags=0;
 unsigned long			buf;
 MemProber				probe;
 void					*faultAddr;
-unsigned				hid0;
 
 	/* lazy init (not strictly thread safe!) */
 	if (!origHandler) bspExtInit();
@@ -239,10 +243,9 @@ unsigned				hid0;
 	}
 
 	if (bspExtVerbosity) {
-		hid0=_read_HIDx();
 		fprintf(stderr,"Warning: bspExtMemProbe kills real-time performance.\n");
-		if ( !(hid0 & HID0_EMCP) ) {
-		    fprintf(stderr,"         Your BSP has MCP exceptions switched OFF - we\n");
+		if ( !useMcp ) {
+		    fprintf(stderr,"         Your BSP does or can not use MCP exceptions - we\n");
 		    fprintf(stderr,"         must probe with INTERRUPTS DISABLED !!!\n");
 		}
 	    fprintf(stderr,"         use only during driver initialization\n\n");
@@ -263,9 +266,7 @@ unsigned				hid0;
 	if (write && pval)
 		memcpy(&buf, pval, size);
 
-	hid0=_read_HIDx();
-
-	if ( !(hid0 & HID0_EMCP) ) {
+	if ( ! useMcp ) {
 		/* MCP exceptions are not enabled; use
 		 * exclusive access to host bridge status
 		 * - data access exceptions still work...
@@ -284,7 +285,7 @@ rtems_interrupt_disable(flags);
 		}
 	}
 
-	if ( !(hid0 & HID0_EMCP) ) {
+	if ( ! useMcp ) {
 		/* MCP exceptions are not enabled; use
 		 * exclusive access to host bridge status
 		 */
