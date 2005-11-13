@@ -70,7 +70,8 @@ SPR_RW(HID0)
 #define _read_HIDx    _read_HID0
 #define _write_HIDx   _write_HID0
 #else
-#error Hmmm what CPU flavor are you using -- is EMPC in HID0 or HID1 ?
+#warning "Hmmm what CPU flavor are you using -- is EMPC in HID0 or HID1 ?"
+#warning "Disabling MCP interrupt support -- must poll with interrupts disabled"
 #endif
 
 typedef struct EH_NodeRec_ {
@@ -193,6 +194,7 @@ _bspExtMemProbeInit(void)
 {
 rtems_interrupt_level	level;
 
+#ifdef _write_HIDx
 	/* try to clear pending errors and enable
 	 * MCP in HID0 on success
 	 */
@@ -202,7 +204,7 @@ rtems_interrupt_level	level;
 	/* see if there are still errors pending */
 	if ( _BSP_clear_hostbridge_errors(0,1) ) {
 		fprintf(stderr,"Warning: unable to clear pending hostbridge errors; leaving MCP disabled\n");
-		fprintf(stderr,"         proper operation of memory probing not guaranteed\n");
+		fprintf(stderr,"         proper operation of address probing not guaranteed\n");
 	} else {
 	     /* enable MCP at the hostbridge */
 	     if (_BSP_clear_hostbridge_errors(1,1) !=-1) {
@@ -210,6 +212,11 @@ rtems_interrupt_level	level;
 			_write_HIDx( _read_HIDx() | HID0_EMCP );/* enable MCP */
 		 }
 	}
+#else
+	fprintf(stderr,"libbspExt - Warning: it seems that MCP support is not available or not\n");
+	fprintf(stderr,"                     implemented on your board. Address probing must be\n");
+	fprintf(stderr,"                     performed in polling mode with interrupts disabled\n");
+#endif
 
 	/* switch exception handlers */
 	rtems_interrupt_disable(level);
