@@ -103,8 +103,8 @@ void * memProbeEnd(void);
 
 
 __asm__(
-	".text\n"
-	".GLOBAL memProbeByte, memProbeShort, memProbeLong, memProbeEnd\n"
+	"	.text\n"
+	"	.GLOBAL memProbeByte, memProbeShort, memProbeLong, memProbeEnd\n"
 	"memProbeByte:		\n"
 	"	lbz %r4, 0(%r4) \n"
 	"	stb %r4, 0(%r5) \n"
@@ -117,18 +117,17 @@ __asm__(
 	"	lwz %r4, 0(%r4) \n"
 	"	stw %r4, 0(%r5) \n"
 	"1:	sync            \n"
-	"   nop             \n"	/* could take some time until MCP is asserted */
-	"   nop             \n"
-	"   nop             \n"
-	"   nop             \n"
-	"   nop             \n"
-	"   nop             \n"
-	"   nop             \n"
-	"   nop             \n"
-	"   sync            \n"
+	"	nop             \n"	/* could take some time until MCP is asserted */
+	"	nop             \n"
+	"	nop             \n"
+	"	nop             \n"
+	"	nop             \n"
+	"	nop             \n"
+	"	nop             \n"
+	"	nop             \n"
+	"	sync            \n"
 	"memProbeEnd:       \n"
-	"   blr             \n"
-	".data              \n"
+	"	blr             \n"
 );
 
 extern int

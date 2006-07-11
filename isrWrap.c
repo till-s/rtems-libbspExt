@@ -107,7 +107,7 @@ ISR	*preq;
 								d.on   = d.off = noop;
 								d.isOn = noop1;
 
-								d.hdl  = w->wrapper;
+								d.hdl  = (rtems_irq_hdl)w->wrapper;
 								d.name = w->irqLine;
 								assert ( BSP_remove_rtems_irq_handler(&d) );
 								w->irqLine = -1;
@@ -164,7 +164,7 @@ ISR	req = malloc(sizeof(*req));
 			d.on   = d.off = noop;
 			d.isOn = noop1;
 
-			d.hdl  = avail->wrapper;
+			d.hdl  = (rtems_irq_hdl)avail->wrapper;
 			d.name = irqLine;
 			avail->irqLine = irqLine;
 
