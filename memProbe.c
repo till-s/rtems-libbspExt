@@ -102,34 +102,6 @@ void * memProbeLong(void *rval, void *from, void *to);
 void * memProbeEnd(void);
 
 
-__asm__(
-	"	.text\n"
-	"	.GLOBAL memProbeByte, memProbeShort, memProbeLong, memProbeEnd\n"
-	"memProbeByte:		\n"
-	"	lbz %r4, 0(%r4) \n"
-	"	stb %r4, 0(%r5) \n"
-	"	b	1f			\n"
-	"memProbeShort:		\n"
-	"	lhz %r4, 0(%r4) \n"
-	"	sth %r4, 0(%r5) \n"
-	"	b	1f			\n"
-	"memProbeLong:		\n"
-	"	lwz %r4, 0(%r4) \n"
-	"	stw %r4, 0(%r5) \n"
-	"1:	sync            \n"
-	"	nop             \n"	/* could take some time until MCP is asserted */
-	"	nop             \n"
-	"	nop             \n"
-	"	nop             \n"
-	"	nop             \n"
-	"	nop             \n"
-	"	nop             \n"
-	"	nop             \n"
-	"	sync            \n"
-	"memProbeEnd:       \n"
-	"	blr             \n"
-);
-
 extern int
 _bspExtCatchBreakpoint(BSP_Exception_frame *fp);
 
@@ -376,5 +348,33 @@ unsigned long flags;
 
 	return 0 == p;
 }
+
+__asm__(
+	"	.text\n"
+	"	.GLOBAL memProbeByte, memProbeShort, memProbeLong, memProbeEnd\n"
+	"memProbeByte:		\n"
+	"	lbz %r4, 0(%r4) \n"
+	"	stb %r4, 0(%r5) \n"
+	"	b	1f			\n"
+	"memProbeShort:		\n"
+	"	lhz %r4, 0(%r4) \n"
+	"	sth %r4, 0(%r5) \n"
+	"	b	1f			\n"
+	"memProbeLong:		\n"
+	"	lwz %r4, 0(%r4) \n"
+	"	stw %r4, 0(%r5) \n"
+	"1:	sync            \n"
+	"	nop             \n"	/* could take some time until MCP is asserted */
+	"	nop             \n"
+	"	nop             \n"
+	"	nop             \n"
+	"	nop             \n"
+	"	nop             \n"
+	"	nop             \n"
+	"	nop             \n"
+	"	sync            \n"
+	"memProbeEnd:       \n"
+	"	blr             \n"
+);
 
 
