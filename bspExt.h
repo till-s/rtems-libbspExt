@@ -49,6 +49,16 @@
 #include <rtems.h>
 #include <bsp.h>
 
+/* Macro to detect RTEMS version */
+#include <rtems/system.h>
+
+#define RTEMS_ISMINVERSION(ma,mi,re) \
+	(    __RTEMS_MAJOR__  > (ma)	\
+	 || (__RTEMS_MAJOR__ == (ma) && __RTEMS_MINOR__  > (mi))	\
+	 || (__RTEMS_MAJOR__ == (ma) && __RTEMS_MINOR__ == (mi) && __RTEMS_REVISION__ >= (re)) \
+    )
+
+
 /* initialize the bsp extensions */
 rtems_status_code
 bspExtInit(void);

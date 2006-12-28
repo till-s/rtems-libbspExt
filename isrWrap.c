@@ -34,11 +34,49 @@
  */
 #include <rtems.h>
 #include <bsp.h>
+#include <rtems/system.h>
 #include <bsp/irq.h>
+
+#include "bspExt.h"
+
 #include <assert.h>
 #include <stdlib.h>
 
-#include "bspExt.h"
+
+static void noop(const rtems_irq_connect_data *unused) {};
+static int  noop1(const rtems_irq_connect_data *unused) { return 0;};
+
+#if RTEMS_ISMINVERSION(4,6,99)
+/* Finally have an ISR argument but the API still sucks */
+int
+bspExtInstallSharedISR(int irqLine, void (*isr)(void *), void * uarg, int flags)
+{
+rtems_irq_connect_data suck = {0};
+	suck.name   = irqLine;
+	suck.hdl    = isr;
+	suck.handle = uarg;
+	suck.on     = noop;
+	suck.off    = noop;
+	suck.isOn   = noop1;
+	return ! ( ( BSPEXT_ISR_NONSHARED & flags ) ?
+		BSP_install_rtems_irq_handler(&suck) :	
+		BSP_install_rtems_shared_irq_handler(&suck) );
+}
+
+int
+bspExtRemoveSharedISR(int irqLine, void (*isr)(void *), void *uarg)
+{
+rtems_irq_connect_data suck = {0};
+	suck.name   = irqLine;
+	suck.hdl    = isr;
+	suck.handle = uarg;
+	suck.on     = noop;
+	suck.off    = noop;
+	suck.isOn   = noop1;
+	return ! BSP_remove_rtems_irq_handler(&suck);
+}
+
+#else
 
 typedef volatile struct ISRRec_ {
 	void  *uarg;
@@ -80,9 +118,6 @@ static WrapRec wrappers[] = {
 	SLOTDECL(5),
 	SLOTDECL(6),
 };
-
-static void noop(const rtems_irq_connect_data *unused) {};
-static int  noop1(const rtems_irq_connect_data *unused) { return 0;};
 
 int
 bspExtRemoveSharedISR(int irqLine, void (*isr)(void *), void *uarg)
@@ -180,3 +215,5 @@ bailout:
 	free((void*)req);
 	return req != 0;
 }
+
+#endif
