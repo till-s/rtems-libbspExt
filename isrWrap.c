@@ -46,7 +46,7 @@
 static void noop(const rtems_irq_connect_data *unused) {};
 static int  noop1(const rtems_irq_connect_data *unused) { return 0;};
 
-#if RTEMS_ISMINVERSION(4,6,99)
+#if RTEMS_ISMINVERSION(4,6,99) && defined(BSP_SHARED_HANDLER_SUPPORT)
 /* Finally have an ISR argument but the API still sucks */
 int
 bspExtInstallSharedISR(int irqLine, void (*isr)(void *), void * uarg, int flags)
