@@ -59,7 +59,11 @@ $(LIB): ${OBJS}
 
 ifndef RTEMS_SITE_INSTALLDIR
 RTEMS_SITE_INSTALLDIR = $(PROJECT_RELEASE)
+INSTINCDIR=${RTEMS_SITE_INSTALLDIR}/lib/include/
+else
+INSTINCDIR=${RTEMS_SITE_INSTALLDIR}/include/
 endif
+INSTLIBDIR=${RTEMS_SITE_INSTALLDIR}/lib/
 
 ${RTEMS_SITE_INSTALLDIR}/lib \
 ${RTEMS_SITE_INSTALLDIR}/include/bsp:
@@ -67,9 +71,9 @@ ${RTEMS_SITE_INSTALLDIR}/include/bsp:
 
 # Install the library, appending _g or _p as appropriate.
 # for include files, just use $(INSTALL_CHANGE)
-install:  all ${RTEMS_SITE_INSTALLDIR}/lib ${RTEMS_SITE_INSTALLDIR}/include/bsp/
-	$(INSTALL_VARIANT) -m 644 ${LIB} ${RTEMS_SITE_INSTALLDIR}/lib/
-	$(INSTALL_CHANGE) -m 644 ${H_FILES} ${RTEMS_SITE_INSTALLDIR}/include/bsp/
+install:  all ${INSTLIBDIR} ${INSTINCDIR}/bsp/
+	$(INSTALL_VARIANT) -m 644 ${LIB} ${INSTLIBDIR}
+	$(INSTALL_CHANGE) -m 644 ${H_FILES} ${INSTINCDIR}/bsp/
 
 REVISION=$(filter-out $$%,$$Name$$)
 tar:
