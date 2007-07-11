@@ -63,6 +63,8 @@
 rtems_status_code
 bspExtInit(void);
 
+#ifdef __PPC__
+
 /* probe a memory address:
  *
  * addr : address to probe
@@ -164,6 +166,8 @@ bspExtRemoveBreakpoint(void *addr);
  */ 
 extern int bspExtVerbosity;
 
+#endif
+
 /* Install an ISR ( void (*isr)(void *uarg) ) to an interrupt line
  * ('name' in the RTEMS BSP jargon; these can be found in <bsp/irq.h>
  * E.g. the 'name' of a PCI interrupt line as read from PCI configuration
@@ -197,6 +201,7 @@ bspExtRemoveSharedISR(int name, void (*isr)(void *uarg), void *uarg);
 void bspExtLock();
 void bspExtUnlock();
 
+#ifdef __PPC__
 /* Exception Handlers */
 
 /* An exception handler
@@ -230,5 +235,7 @@ int bspExtInstallEHandler(BspExtEHandler h, void *usrData, int where);
  * RETURNS: 0 on success, nonzero if handler/usrData pair not found
  */
 int bspExtRemoveEHandler(BspExtEHandler h, void *usrData);
+
+#endif
 
 #endif

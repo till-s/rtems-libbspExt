@@ -66,7 +66,9 @@ bspExtUnlock()
 	assert ( RTEMS_SUCCESSFUL == rtems_semaphore_release(__bspExtLock ) );
 }
 
+#ifdef __PPC__
 extern void _bspExtMemProbeInit(void);
+#endif
 
 int bspExtVerbosity = 1;
 
@@ -84,7 +86,9 @@ if (RTEMS_SUCCESSFUL!=(rval = rtems_semaphore_create(n,1,
 	&__bspExtLock)))
 	return rval;
 
+#ifdef __PPC__
 _bspExtMemProbeInit();
+#endif
 
 return rval;
 }

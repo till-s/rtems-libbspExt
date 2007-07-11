@@ -10,7 +10,9 @@ LIBNAME=libbspExt.a        # xxx- your library names goes here
 LIB=${ARCH}/${LIBNAME}
 
 # C and C++ source names, if any, go here -- minus the .c or .cc
-C_PIECES=bspExt memProbe dabrBpnt isrWrap
+C_PIECES=bspExt isrWrap
+C_PIECES_powerpc=memProbe dabrBpnt
+C_PIECES+=$(C_PIECES_$(RTEMS_CPU))
 C_FILES=$(C_PIECES:%=%.c)
 C_O_FILES=$(C_PIECES:%=${ARCH}/%.o)
 
