@@ -67,8 +67,8 @@ INSTINCDIR=${RTEMS_SITE_INSTALLDIR}/include/
 endif
 INSTLIBDIR=${RTEMS_SITE_INSTALLDIR}/lib/
 
-${RTEMS_SITE_INSTALLDIR}/lib \
-${RTEMS_SITE_INSTALLDIR}/include/bsp:
+${INSTLIBDIR} \
+${INSTINCDIR}/bsp:
 	test -d $@ || mkdir -p $@
 
 # Install the library, appending _g or _p as appropriate.

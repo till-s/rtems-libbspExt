@@ -155,6 +155,7 @@ bspExtRemoveDataBreakpoint(void *dataAddr);
 rtems_status_code
 bspExtRemoveBreakpoint(void *addr);
 
+#endif
 
 /* Silence warnings by setting this variable to zero:
  *
@@ -166,7 +167,6 @@ bspExtRemoveBreakpoint(void *addr);
  */ 
 extern int bspExtVerbosity;
 
-#endif
 
 /* Install an ISR ( void (*isr)(void *uarg) ) to an interrupt line
  * ('name' in the RTEMS BSP jargon; these can be found in <bsp/irq.h>
