@@ -73,7 +73,7 @@ ${INSTINCDIR}/bsp:
 
 # Install the library, appending _g or _p as appropriate.
 # for include files, just use $(INSTALL_CHANGE)
-install:  all ${INSTLIBDIR} ${INSTINCDIR}/bsp/
+install:  all ${INSTLIBDIR} ${INSTINCDIR}/bsp
 	$(INSTALL_VARIANT) -m 644 ${LIB} ${INSTLIBDIR}
 	$(INSTALL_CHANGE) -m 644 ${H_FILES} ${INSTINCDIR}/bsp/
 
