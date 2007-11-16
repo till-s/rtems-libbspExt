@@ -65,6 +65,8 @@ bspExtInit(void);
 
 #ifdef __PPC__
 
+#include <bsp/vectors.h>
+
 /* probe a memory address:
  *
  * addr : address to probe
