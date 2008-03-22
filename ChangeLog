@@ -1,4 +1,6 @@
  Changes since release 1.3-beta:
+	- replaced #ifdef <ppc_cpu_flavor> in memProbe.c by a run-time
+	  check (using libcpu/cpuIdent.h).
 	- make ISR wrapper available to other architectures (i386 has no
 	  shareable extensions to date).
  Changes since release 1.2-beta:

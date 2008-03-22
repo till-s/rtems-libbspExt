@@ -57,22 +57,13 @@
 #include <assert.h>
 
 #include <libcpu/spr.h>
+#include <libcpu/cpuIdent.h>
 
 #define SRR1_TEA_EXC    (1<<(31-13))
 #define SRR1_MCP_EXC    (1<<(31-12))
 
-#if defined(mpc7455) || defined(mpc7450)
 SPR_RW(HID1)
-#define _read_HIDx    _read_HID1
-#define _write_HIDx   _write_HID1
-#elif defined(mpc7400) || defined(mpc750) || defined(mpc604) || defined(mpc603)
 SPR_RW(HID0)
-#define _read_HIDx    _read_HID0
-#define _write_HIDx   _write_HID0
-#else
-#warning "Hmmm what CPU flavor are you using -- is EMPC in HID0 or HID1 ?"
-#warning "Disabling MCP interrupt support -- must poll with interrupts disabled"
-#endif
 
 typedef struct EH_NodeRec_ {
 	BspExtEHandler	   h;
@@ -164,30 +155,58 @@ void
 _bspExtMemProbeInit(void)
 {
 rtems_interrupt_level	level;
+int                     mcp_hid = -1;
 
-#ifdef _write_HIDx
-	/* try to clear pending errors and enable
-	 * MCP in HID0 on success
-	 */
+	/* Find out which HID register holds EMCP (if any) */
+	switch ( get_ppc_cpu_type() ) {
+		case PPC_7455: case PPC_7457:
+			mcp_hid = 1;
+		break;
 
-	/* clear pending errors */
-	_BSP_clear_hostbridge_errors(0,1);
-	/* see if there are still errors pending */
-	if ( _BSP_clear_hostbridge_errors(0,1) ) {
-		fprintf(stderr,"Warning: unable to clear pending hostbridge errors; leaving MCP disabled\n");
-		fprintf(stderr,"         proper operation of address probing not guaranteed\n");
-	} else {
-	     /* enable MCP at the hostbridge */
-	     if (_BSP_clear_hostbridge_errors(1,1) !=-1) {
-			useMcp = 1;
-			_write_HIDx( _read_HIDx() | HID0_EMCP );/* enable MCP */
-		 }
+		case PPC_7400:
+		case PPC_750:
+		case PPC_604: case PPC_604e: case PPC_604r:
+		case PPC_603: case PPC_603e: case PPC_603ev:
+		case PPC_8260: /* same as 8260: case PPC_8240: */ case PPC_8245:
+			mcp_hid = 0;
+		break;
+
+		default:
+			mcp_hid = -1; /* none or unknown; disable MCP support */
+		break;
 	}
-#else
-	fprintf(stderr,"libbspExt - Warning: it seems that MCP support is not available or not\n");
-	fprintf(stderr,"                     implemented on your board. Address probing must be\n");
-	fprintf(stderr,"                     performed in polling mode with interrupts disabled\n");
-#endif
+
+	if ( mcp_hid >= 0 ) {
+		/* try to clear pending errors and enable
+		 * MCP in HID0 on success
+		 */
+
+		/* clear pending errors */
+		_BSP_clear_hostbridge_errors(0,1);
+		/* see if there are still errors pending */
+		if ( _BSP_clear_hostbridge_errors(0,1) ) {
+			fprintf(stderr,"Warning: unable to clear pending hostbridge errors; leaving MCP disabled\n");
+			fprintf(stderr,"         proper operation of address probing not guaranteed\n");
+		} else {
+			/* enable MCP at the hostbridge */
+			if (_BSP_clear_hostbridge_errors(1,1) !=-1) {
+				useMcp = 1;
+				if ( 1 == mcp_hid ) {
+					_write_HID1( _read_HID1() | HID0_EMCP );/* enable MCP */
+				} else if ( 0 == mcp_hid ) {
+					_write_HID0( _read_HID0() | HID0_EMCP );/* enable MCP */
+				} else {
+					BSP_panic(__FILE__" bad value for mcp_hid");
+				}
+			}
+		}
+	}
+
+	if ( !useMcp ) {
+		fprintf(stderr,"libbspExt - Warning: it seems that MCP support is not available on your CPU\n");
+		fprintf(stderr,"                     or not implemented by your board. Address probing must\n");
+		fprintf(stderr,"                     be performed in polling mode with interrupts disabled\n");
+	}
 
 	/* switch exception handlers */
 	rtems_interrupt_disable(level);
