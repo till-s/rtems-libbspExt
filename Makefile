@@ -35,6 +35,9 @@ include $(RTEMS_MAKEFILE_PATH)/Makefile.inc
 include $(RTEMS_CUSTOM)
 include $(RTEMS_ROOT)/make/lib.cfg
 
+ifneq ($(filter $(RTEMS_CPU),i386 powerpc)xx,xx)
+# this CPU is supported
+
 #
 # Add local stuff here using +=
 #
@@ -76,6 +79,8 @@ ${INSTINCDIR}/bsp:
 install:  all ${INSTLIBDIR} ${INSTINCDIR}/bsp
 	$(INSTALL_VARIANT) -m 644 ${LIB} ${INSTLIBDIR}
 	$(INSTALL_CHANGE) -m 644 ${H_FILES} ${INSTINCDIR}/bsp/
+
+endif
 
 REVISION=$(filter-out $$%,$$Name$$)
 tar:
