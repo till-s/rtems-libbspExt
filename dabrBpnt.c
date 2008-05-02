@@ -131,6 +131,8 @@ bspExtInstallDataBreakpoint(void *dataAddr, int mode, BspExtBpntHdlr usrHandler,
 	/* lazy init */
 	bspExtInit();
 
+#warning "FIXME: add run-time check for CPU type"
+
 	if (!(mode & (DABR_WR|DABR_RD)))
 		return RTEMS_INVALID_NUMBER;	/* invalid mode */
 
