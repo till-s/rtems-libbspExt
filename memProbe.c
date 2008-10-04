@@ -92,6 +92,14 @@ void * memProbeShort(void *rval, void *from, void *to);
 void * memProbeLong(void *rval, void *from, void *to);
 void * memProbeEnd(void);
 
+unsigned long _BSP_clear_hostbridge_errors(int,int)
+__attribute__((weak, alias("_bspExtMemProbe_dummy_clear_hostbridge_errors")));
+
+unsigned long
+_bspExtMemProbe_dummy_clear_hostbridge_errors(int enableMCP, int quiet)
+{
+	return 0;
+}
 
 extern int
 _bspExtCatchBreakpoint(BSP_Exception_frame *fp);
