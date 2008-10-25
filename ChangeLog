@@ -1,5 +1,6 @@
  Changes since release 1.5:
  Changes since release 1.4:
+    - 2008/10/25: new, more liberal 'SLAC' license.
     - 2008/10/4 (T.S.): Added weak alias for _BSP_clear_hostbridge_errors()
 	  so that we can link on BSPs w/o that routine.
  Changes since release 1.3-beta:
