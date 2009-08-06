@@ -1,4 +1,7 @@
  Changes since release 1.5:
+    - 2009/08/06 (T.S.)
+      bspExt.h: Added extern "C" linkage for C++ inclusion (Thanks to
+      Daron Chabot).
  Changes since release 1.4:
     - 2008/10/25: new, more liberal 'SLAC' license.
     - 2008/10/4 (T.S.): Added weak alias for _BSP_clear_hostbridge_errors()
