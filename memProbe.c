@@ -98,7 +98,7 @@ __attribute__((weak, alias("_bspExtMemProbe_dummy_clear_hostbridge_errors")));
 unsigned long
 _bspExtMemProbe_dummy_clear_hostbridge_errors(int enableMCP, int quiet)
 {
-	return 0;
+	return  enableMCP ? -1 : 0;
 }
 
 extern int

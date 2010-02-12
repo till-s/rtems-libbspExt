@@ -1,4 +1,6 @@
  Changes since release 1.5:
+    - 2010/02/12 (T.S.) Let dummy implementation of clear_hostbridge_errors()
+      return -1 if called with nonzero 'enableMCP' argument.
     - 2009/08/06 (T.S.)
       bspExt.h: Added extern "C" linkage for C++ inclusion (Thanks to
       Daron Chabot).
